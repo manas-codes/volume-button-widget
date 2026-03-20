@@ -1,40 +1,102 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_width="60dp"
-    android:layout_height="300dp"
+    android:layout_width="220dp"
+    android:layout_height="320dp"
     android:background="@drawable/bg_expanded_container"
-    android:orientation="vertical"
-    android:gravity="center_horizontal"
-    android:elevation="8dp">
+    android:orientation="horizontal"
+    android:padding="16dp"
+    android:gravity="center"
+    android:elevation="16dp">
 
-    <FrameLayout
-        android:layout_width="60dp"
-        android:layout_height="0dp"
+    <!-- Media Volume -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
         android:layout_weight="1"
-        android:layout_marginTop="16dp"
-        android:layout_marginBottom="16dp">
+        android:orientation="vertical"
+        android:gravity="center_horizontal">
         
-        <SeekBar
-            android:id="@+id/volume_slider"
-            android:layout_width="200dp"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:rotation="270"
-            android:progressTint="@color/md_theme_primary"
-            android:thumbTint="@color/md_theme_primary"/>
-    </FrameLayout>
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1">
+            <SeekBar
+                android:id="@+id/slider_media"
+                android:layout_width="240dp"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:rotation="270"
+                android:progressTint="@color/status_media"
+                android:thumbTint="@color/status_media" />
+        </FrameLayout>
 
-    <ImageView
-        android:id="@+id/btn_close"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
-        android:padding="8dp"
-        android:layout_marginBottom="16dp"
-        android:src="@drawable/ic_volume_up"
-        app:tint="@color/md_theme_primary"
-        android:background="?android:attr/selectableItemBackgroundBorderless"
-        android:clickable="true"
-        android:focusable="true"
-        android:contentDescription="@string/app_name"/>
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_volume_up"
+            app:tint="@color/status_media"
+            android:layout_marginTop="8dp" />
+    </LinearLayout>
+
+    <!-- Ring Volume -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:gravity="center_horizontal">
+        
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1">
+            <SeekBar
+                android:id="@+id/slider_ring"
+                android:layout_width="240dp"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:rotation="270"
+                android:progressTint="@color/status_ring"
+                android:thumbTint="@color/status_ring" />
+        </FrameLayout>
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_volume_ring"
+            app:tint="@color/status_ring"
+            android:layout_marginTop="8dp" />
+    </LinearLayout>
+
+    <!-- Alarm Volume -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:gravity="center_horizontal">
+        
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1">
+            <SeekBar
+                android:id="@+id/slider_alarm"
+                android:layout_width="240dp"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:rotation="270"
+                android:progressTint="@color/status_alarm"
+                android:thumbTint="@color/status_alarm" />
+        </FrameLayout>
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_volume_alarm"
+            app:tint="@color/status_alarm"
+            android:layout_marginTop="8dp" />
+    </LinearLayout>
+
 </LinearLayout>

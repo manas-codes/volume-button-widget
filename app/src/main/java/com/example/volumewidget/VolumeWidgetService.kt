@@ -26,13 +26,16 @@ class VolumeWidgetService : Service() {
     private lateinit var windowManager: WindowManager
     private lateinit var floatingView: View
     private lateinit var expandedView: View
+    private lateinit var dimOverlayView: View
     private lateinit var audioManager: AudioManager
     private lateinit var prefs: SharedPreferences
 
     private val CHANNEL_ID = "VolumeWidgetServiceChannel"
     private var isExpanded = false
 
-    private lateinit var params: WindowManager.LayoutParams
+    private lateinit var floatingParams: WindowManager.LayoutParams
+    private lateinit var expandedParams: WindowManager.LayoutParams
+    private lateinit var dimParams: WindowManager.LayoutParams
 
     override fun onBind(intent: Intent): IBinder? = null
 
@@ -46,38 +49,34 @@ class VolumeWidgetService : Service() {
         createNotificationChannel()
         startForeground(1, createNotification())
 
-        setupFloatingView()
-        setupExpandedView()
+        setupViews()
     }
 
-    private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                "Volume Widget Service",
-                NotificationManager.IMPORTANCE_LOW
-            )
-            val manager = getSystemService(NotificationManager::class.java)
-            manager.createNotificationChannel(channel)
+    private fun setupViews() {
+        val inflater = LayoutInflater.from(this)
+        floatingView = inflater.inflate(R.layout.widget_floating, null)
+        expandedView = inflater.inflate(R.layout.widget_expanded, null)
+        dimOverlayView = inflater.inflate(R.layout.view_dim_overlay, null)
+
+        setupFloatingParams()
+        setupExpandedParams()
+        setupDimParams()
+
+        windowManager.addView(floatingView, floatingParams)
+
+        setupFloatingTouchListener()
+        setupExpandedSliders()
+        
+        dimOverlayView.setOnClickListener {
+            if (isExpanded) toggleExpandedView()
         }
     }
 
-    private fun createNotification(): Notification {
-        return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Volume Widget Active")
-            .setContentText("Floating volume control is running")
-            .setSmallIcon(android.R.drawable.ic_lock_silent_mode_off)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .build()
-    }
-
-    private fun setupFloatingView() {
-        floatingView = LayoutInflater.from(this).inflate(R.layout.widget_floating, null)
-        
+    private fun setupFloatingParams() {
         val savedX = prefs.getInt("widget_x", 0)
-        val savedY = prefs.getInt("widget_y", 100)
+        val savedY = prefs.getInt("widget_y", 200)
 
-        params = WindowManager.LayoutParams(
+        floatingParams = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) 
@@ -85,27 +84,53 @@ class VolumeWidgetService : Service() {
             else WindowManager.LayoutParams.TYPE_PHONE,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
             PixelFormat.TRANSLUCENT
+        ).apply {
+            gravity = Gravity.TOP or Gravity.START
+            x = savedX
+            y = savedY
+        }
+    }
+
+    private fun setupExpandedParams() {
+        expandedParams = WindowManager.LayoutParams(
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) 
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY 
+            else WindowManager.LayoutParams.TYPE_PHONE,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+            PixelFormat.TRANSLUCENT
+        ).apply {
+            gravity = Gravity.CENTER
+        }
+    }
+
+    private fun setupDimParams() {
+        dimParams = WindowManager.LayoutParams(
+            WindowManager.LayoutParams.MATCH_PARENT,
+            WindowManager.LayoutParams.MATCH_PARENT,
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) 
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY 
+            else WindowManager.LayoutParams.TYPE_PHONE,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+            PixelFormat.TRANSLUCENT
         )
+    }
 
-        params.gravity = Gravity.TOP or Gravity.START
-        params.x = savedX
-        params.y = savedY
-
-        windowManager.addView(floatingView, params)
-
+    private fun setupFloatingTouchListener() {
         floatingView.setOnTouchListener(object : View.OnTouchListener {
             private var initialX = 0
             private var initialY = 0
             private var initialTouchX = 0f
             private var initialTouchY = 0f
             private var isDragging = false
-            private val CLICK_THRESHOLD = 10
+            private val CLICK_THRESHOLD = 15
 
             override fun onTouch(v: View, event: MotionEvent): Boolean {
                 when (event.action) {
                     MotionEvent.ACTION_DOWN -> {
-                        initialX = params.x
-                        initialY = params.y
+                        initialX = floatingParams.x
+                        initialY = floatingParams.y
                         initialTouchX = event.rawX
                         initialTouchY = event.rawY
                         isDragging = false
@@ -115,25 +140,18 @@ class VolumeWidgetService : Service() {
                         if (!isDragging) {
                             toggleExpandedView()
                         } else {
-                            prefs.edit()
-                                .putInt("widget_x", params.x)
-                                .putInt("widget_y", params.y)
-                                .apply()
+                            prefs.edit().putInt("widget_x", floatingParams.x).putInt("widget_y", floatingParams.y).apply()
                         }
                         return true
                     }
                     MotionEvent.ACTION_MOVE -> {
                         val diffX = (event.rawX - initialTouchX).toInt()
                         val diffY = (event.rawY - initialTouchY).toInt()
-
-                        if (abs(diffX) > CLICK_THRESHOLD || abs(diffY) > CLICK_THRESHOLD) {
-                            isDragging = true
-                        }
-
+                        if (abs(diffX) > CLICK_THRESHOLD || abs(diffY) > CLICK_THRESHOLD) isDragging = true
                         if (isDragging) {
-                            params.x = initialX + diffX
-                            params.y = initialY + diffY
-                            windowManager.updateViewLayout(floatingView, params)
+                            floatingParams.x = initialX + diffX
+                            floatingParams.y = initialY + diffY
+                            windowManager.updateViewLayout(floatingView, floatingParams)
                         }
                         return true
                     }
@@ -143,52 +161,63 @@ class VolumeWidgetService : Service() {
         })
     }
 
-    private fun setupExpandedView() {
-        expandedView = LayoutInflater.from(this).inflate(R.layout.widget_expanded, null)
-        
-        val seekBar = expandedView.findViewById<SeekBar>(R.id.volume_slider)
-        val btnClose = expandedView.findViewById<ImageView>(R.id.btn_close)
+    private fun setupExpandedSliders() {
+        setupSlider(expandedView.findViewById(R.id.slider_media), AudioManager.STREAM_MUSIC)
+        setupSlider(expandedView.findViewById(R.id.slider_ring), AudioManager.STREAM_RING)
+        setupSlider(expandedView.findViewById(R.id.slider_alarm), AudioManager.STREAM_ALARM)
+    }
 
-        val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
-        seekBar.max = maxVolume
-        
-        btnClose.setOnClickListener {
-            toggleExpandedView()
-        }
-
+    private fun setupSlider(seekBar: SeekBar, streamType: Int) {
+        seekBar.max = audioManager.getStreamMaxVolume(streamType)
+        seekBar.progress = audioManager.getStreamVolume(streamType)
         seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                if (fromUser) {
-                    audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, progress, 0)
-                }
+            override fun onProgressChanged(sb: SeekBar?, progress: Int, fromUser: Boolean) {
+                if (fromUser) audioManager.setStreamVolume(streamType, progress, 0)
             }
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStartTrackingTouch(sb: SeekBar?) {}
+            override fun onStopTrackingTouch(sb: SeekBar?) {}
         })
     }
 
     private fun toggleExpandedView() {
         if (!isExpanded) {
-            val seekBar = expandedView.findViewById<SeekBar>(R.id.volume_slider)
-            seekBar.progress = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+            // Refresh volumes before showing
+            expandedView.findViewById<SeekBar>(R.id.slider_media).progress = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+            expandedView.findViewById<SeekBar>(R.id.slider_ring).progress = audioManager.getStreamVolume(AudioManager.STREAM_RING)
+            expandedView.findViewById<SeekBar>(R.id.slider_alarm).progress = audioManager.getStreamVolume(AudioManager.STREAM_ALARM)
 
-            windowManager.removeView(floatingView)
-            windowManager.addView(expandedView, params)
+            windowManager.addView(dimOverlayView, dimParams)
+            windowManager.addView(expandedView, expandedParams)
             isExpanded = true
         } else {
             windowManager.removeView(expandedView)
-            windowManager.addView(floatingView, params)
+            windowManager.removeView(dimOverlayView)
+            // No need to add back floatingView as it's never removed, just obscured or moved
+            // Wait, actually I should probably move the floating icon or hide it?
+            // Premium design: keeping the icon exactly where it was.
             isExpanded = false
         }
     }
 
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(CHANNEL_ID, "Volume Widget Service", NotificationManager.IMPORTANCE_LOW)
+            getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+        }
+    }
+
+    private fun createNotification(): Notification {
+        return NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle("Volume Widget Active")
+            .setSmallIcon(android.R.drawable.ic_lock_silent_mode_off)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .build()
+    }
+
     override fun onDestroy() {
         super.onDestroy()
-        if (::floatingView.isInitialized && floatingView.parent != null) {
-            windowManager.removeView(floatingView)
-        }
-        if (::expandedView.isInitialized && expandedView.parent != null) {
-            windowManager.removeView(expandedView)
-        }
+        if (::floatingView.isInitialized && floatingView.parent != null) windowManager.removeView(floatingView)
+        if (::expandedView.isInitialized && expandedView.parent != null) windowManager.removeView(expandedView)
+        if (::dimOverlayView.isInitialized && dimOverlayView.parent != null) windowManager.removeView(dimOverlayView)
     }
 }
