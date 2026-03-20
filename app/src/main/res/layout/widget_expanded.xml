@@ -35,7 +35,7 @@
             android:layout_width="24dp"
             android:layout_height="24dp"
             android:src="@drawable/ic_volume_up"
-            app:tint="@color/status_media"
+            android:tint="@color/status_media"
             android:layout_marginTop="8dp" />
     </LinearLayout>
 
@@ -65,7 +65,7 @@
             android:layout_width="24dp"
             android:layout_height="24dp"
             android:src="@drawable/ic_volume_ring"
-            app:tint="@color/status_ring"
+            android:tint="@color/status_ring"
             android:layout_marginTop="8dp" />
     </LinearLayout>
 
@@ -95,7 +95,7 @@
             android:layout_width="24dp"
             android:layout_height="24dp"
             android:src="@drawable/ic_volume_alarm"
-            app:tint="@color/status_alarm"
+            android:tint="@color/status_alarm"
             android:layout_marginTop="8dp" />
     </LinearLayout>
 

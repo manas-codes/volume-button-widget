@@ -12,5 +12,5 @@
         android:layout_gravity="center"
         android:src="@drawable/ic_volume_up"
         android:contentDescription="@string/app_name"
-        app:tint="@color/primary" />
+        android:tint="@color/primary" />
 </FrameLayout>
